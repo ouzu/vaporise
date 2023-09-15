@@ -4,10 +4,13 @@
   inputs.microvm.url = "github:astro/microvm.nix";
   inputs.microvm.inputs.nixpkgs.follows = "nixpkgs";
 
-  outputs = { self, nixpkgs, microvm, ... } @ allAttrs:
+  inputs.mistify.url = "github:ouzu/tinyFaaS";
+  inputs.mistify.inputs.nixpkgs.follows = "nixpkgs";
+
+  outputs = { self, nixpkgs, microvm, mistify, ... } @ allAttrs:
     let
-      numOfFogNodes = allAttrs.numOfFogNodes or 3;
-      numOfEdgeNodesPerFog = allAttrs.numOfEdgeNodesPerFog or 3;
+      numOfFogNodes = 10;
+      numOfEdgeNodesPerFog = 4;
 
       genFogNodes = builtins.map
         (n: {
@@ -46,6 +49,7 @@
       system = "x86_64-linux";
 
       pkgs = import nixpkgs { inherit system; };
+      tinyFaaS = mistify.packages.${system}.tinyFaaS;
 
       lib = pkgs.lib;
       mod = lib.mod;
@@ -132,8 +136,7 @@
           ip addr flush dev eth0
           ip addr add $IPV4_ADDR/24 dev eth0
           ip link set eth0 up
-          #echo "$HOSTNAME" > /etc/hostname
-          #hostname "$HOSTNAME"
+
           ip route add default via $DEFAULT_GATEWAY
 
           mkdir -p /var/lib/mistify
@@ -142,7 +145,7 @@
         ConfigPort = 8080
         RProxyConfigPort = 8081
         RProxyListenAddress = "0.0.0.0"
-        RProxyBin = "./rproxy"
+        RProxyBin = "rproxy"
 
         COAPPort = 5683
         HTTPPort = 80
@@ -151,19 +154,33 @@
         Backend = "docker"
         ID = "$HOSTNAME"
 
-        Mode = $ROLE
+        Mode = "$ROLE"
 
         RegistryPort = 8082
         Host = "$IPV4_ADDR"
         EOF
         
           if [[ "$ROLE" == "fog" ]]; then
-              echo "ParentAddress = \"172.20.0.2\"" >> /var/lib/mistify/config.toml
+              echo "ParentAddress = \"172.20.0.2:8082\"" >> /var/lib/mistify/config.toml
           elif [[ "$ROLE" == "edge" ]]; then
               PARENT_ID=$(( (NODE_ID - 2 - 1) / NUM_OF_EDGE_NODES_PER_FOG + 2 ))
               PARENT_FOG_NODE_IP="172.20.$((PARENT_ID / 256)).$((PARENT_ID % 256))"
-              echo "ParentAddress = \"$PARENT_FOG_NODE_IP\"" >> /var/lib/mistify/config.toml
+              echo "ParentAddress = \"$PARENT_FOG_NODE_IP:8082\"" >> /var/lib/mistify/config.toml
           fi
+      '';
+
+      mistifyStartScript = pkgs.writeShellScript "start-mistify.sh" ''
+        #!/usr/bin/env bash
+        PATH=$PATH:${lib.makeBinPath [tinyFaaS]}
+        mistify config.toml
+      '';
+
+      tinyFaaSStartScript = pkgs.writeShellScript "start-tinyFaaS.sh" ''
+        #!/usr/bin/env bash
+        PATH=$PATH:${lib.makeBinPath [tinyFaaS]}
+        ln -s ${tinyFaaS}/share/tinyFaaS/runtimes ./runtimes
+        export DOCKER_API_VERSION=1.41
+        manager config.toml
       '';
 
       generateVM = { name, id }: {
@@ -172,6 +189,7 @@
           iperf
           iproute2
           nmap
+          tinyFaaS
         ];
 
         services.iperf3 = {
@@ -181,9 +199,11 @@
 
         services.openssh = {
           enable = true;
-          passwordAuthentication = true;
-          permitRootLogin = "yes";
           openFirewall = true;
+          settings = {
+            PermitRootLogin = "yes";
+            PasswordAuthentication = true;
+          };
         };
 
         networking = {
@@ -194,9 +214,12 @@
             prefixLength = 16;
           }];
           defaultGateway = "172.20.0.1";
+          nameservers = [ "1.1.1.1" ];
+          firewall.allowedTCPPorts = [ 80 8080 8081 8082 9000 ];
+          firewall.allowedUDPPorts = [ 5683 ];
         };
 
-        systemd.services.setupNetwork = {
+        systemd.services.setup-network = {
           description = "Setup networking based on MAC address";
           after = [ "network-pre.target" ];
           before = [ "sshd.service" ];
@@ -208,6 +231,33 @@
           };
         };
 
+        virtualisation.docker.enable = true;
+
+        systemd.services.mistify = {
+          description = "Mistify";
+          after = [ "network-pre.target" "setup-network.service" ];
+          wantedBy = [ "multi-user.target" ];
+          serviceConfig = {
+            Type = "simple";
+            ExecStart = "${mistifyStartScript}";
+            WorkingDirectory = "/var/lib/mistify";
+          };
+        };
+
+        systemd.services.tinyFaaS =
+          {
+            description = "TinyFaaS";
+            after = [ "network-pre.target" "docker.service" "mistify.service" ];
+            wantedBy = [ "multi-user.target" ];
+            serviceConfig = {
+              Type = "simple";
+              ExecStart = "${tinyFaaSStartScript}";
+              WorkingDirectory = "/var/lib/mistify";
+            };
+          };
+
+        system.stateVersion = "23.11";
+
         microvm = {
           interfaces = [{
             type = "tap";
@@ -216,8 +266,10 @@
               let
                 nFog = fillLeadingZeros (builtins.toString numOfFogNodes);
                 nEdge = fillLeadingZeros (builtins.toString numOfEdgeNodesPerFog);
+                id1 = decToHex (mod (id / 256) 256);
+                id2 = decToHex (mod id 256);
               in
-              "02:00:${builtins.substring 0 2 nFog}:${builtins.substring 0 2 nEdge}:${decToHex (mod (id / 256) 256)}:${decToHex (mod id 256)}";
+              "02:00:${nFog}:${nEdge}:${id1}:${id2}";
           }];
           socket = "/tmp/${builtins.toString id}-${name}.socket";
           hypervisor = "firecracker";
@@ -258,7 +310,7 @@
             echo "Setting up tap interface for ${vm.name}-${builtins.toString vm.id}..."
             ip tuntap add tap-${vm.name}-${builtins.toString vm.id} mode tap user $(whoami)
             ip link set tap-${vm.name}-${builtins.toString vm.id} up
-            brctl addif br0 tap-${vm.name}-${builtins.toString vm.id}
+            ip link set dev tap-${vm.name}-${builtins.toString vm.id} master br0
           ''
         )
         vmData);
@@ -267,7 +319,6 @@
         (vm:
           ''
             ip link set tap-${vm.name}-${builtins.toString vm.id} down
-            brctl delif br0 tap-${vm.name}-${builtins.toString vm.id}
             ip tuntap del tap-${vm.name}-${builtins.toString vm.id} mode tap
           ''
         )
@@ -275,8 +326,13 @@
 
       createTcCmds = builtins.concatStringsSep "\n" (builtins.map
         (vm:
+          let
+            device = "tap-${vm.name}-${builtins.toString vm.id}";
+            delay = networkProperties.${vm.name}.delay;
+            rate = networkProperties.${vm.name}.rate;
+          in
           ''
-            tc qdisc add dev tap-${vm.name}-${builtins.toString vm.id} root netem delay ${networkProperties.${vm.name}.delay} rate ${networkProperties.${vm.name}.rate}
+            tc qdisc add dev ${device} root netem delay ${delay} rate ${rate}
           ''
         )
         vmData);
@@ -296,7 +352,7 @@
         setup_networking() {
             # Create bridge
             echo "Setting up bridge interface..."
-            brctl addbr br0
+            ip link add name br0 type bridge
             ip addr add 172.20.0.1/24 dev br0
             ip link set br0 up
 
@@ -332,24 +388,31 @@
 
             # Remove the bridge
             ip link set br0 down
-            brctl delbr br0
+            ip link del br0
         }
 
         teardown_networking
       '';
 
-      startVMsScript = mkScript ''
-        #!/usr/bin/env bash
-        set -e
+      startVMsScript =
+        let
+          nixCmd = "nix --extra-experimental-features nix-command --extra-experimental-features flakes";
+          packages = map (vm: ".#" + vm.name + "-" + builtins.toString vm.id) vmData;
+          names = map (vm: vm.name + "-" + builtins.toString vm.id) vmData;
+        in
+        mkScript ''
+          #!/usr/bin/env bash
+          set -e
 
-        echo "Building VMs..."
-        nix --extra-experimental-features nix-command --extra-experimental-features flakes build -j8 ${builtins.concatStringsSep " " (map (vm: ".#" + vm.name + "-" + builtins.toString vm.id) vmData)} > /var/log/build.log 2>&1
-
-        for vm in ${builtins.concatStringsSep " " (map (vm: vm.name + "-" + builtins.toString vm.id) vmData)}; do
-          echo "Starting $vm..."
-          nix --extra-experimental-features nix-command --extra-experimental-features flakes run .#$vm > /var/log/$vm.log 2>&1 &
-        done
-      '';
+          echo "Building first VM..."
+          ${nixCmd} build .#cloud-2
+          
+          for vm in ${builtins.concatStringsSep " " names}; do
+            echo "Starting $vm..."
+            ${nixCmd} run .#$vm > /var/log/$vm.log 2>&1 &
+            sleep 1
+          done
+        '';
 
       mapVMData = builtins.map
         (vm: {
@@ -363,7 +426,21 @@
       stopVMsScript = mkScript ''
         #!/usr/bin/env bash
 
-        killall firecracker
+        pkill firecracker
+      '';
+
+      loginScript = mkScript ''
+        #!/usr/bin/env bash
+
+        if [ $# -ne 1 ]; then
+            echo "Usage: $0 <hostname-or-ip>"
+            exit 1
+        fi
+
+        HOST="$1"
+
+        PASSWORD=""
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@$HOST"
       '';
 
     in
@@ -387,6 +464,10 @@
         stop = {
           type = "app";
           program = "${stopVMsScript}/bin/script";
+        };
+        login = {
+          type = "app";
+          program = "${loginScript}/bin/script";
         };
       };
     };
