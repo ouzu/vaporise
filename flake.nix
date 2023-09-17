@@ -9,28 +9,13 @@
 
   outputs = { self, nixpkgs, microvm, mistify, ... } @ allAttrs:
     let
+      # how many fog nodes to create
       numOfFogNodes = 10;
+
+      # how many edge nodes to create per fog node
       numOfEdgeNodesPerFog = 4;
 
-      genFogNodes = builtins.map
-        (n: {
-          name = "fog";
-          id = n + 2;
-        })
-        (lib.range 1 numOfFogNodes);
-
-      genEdgeNodes = builtins.map
-        (n: {
-          name = "edge";
-          id = n + 2 + numOfFogNodes;
-        })
-        (lib.range 1 (numOfFogNodes * numOfEdgeNodesPerFog));
-
-      vmData = [{
-        name = "cloud";
-        id = 2;
-      }] ++ genFogNodes ++ genEdgeNodes;
-
+      # network properties for each node type
       networkProperties = {
         cloud = {
           delay = "100ms";
@@ -48,12 +33,36 @@
 
       system = "x86_64-linux";
 
-      pkgs = import nixpkgs { inherit system; };
       tinyFaaS = mistify.packages.${system}.tinyFaaS;
+
+      pkgs = import nixpkgs { inherit system; };
 
       lib = pkgs.lib;
       mod = lib.mod;
 
+      # build the list of fog nodes
+      genFogNodes = builtins.map
+        (n: {
+          name = "fog";
+          id = n + 2;
+        })
+        (lib.range 1 numOfFogNodes);
+
+      # build the list of edge nodes
+      genEdgeNodes = builtins.map
+        (n: {
+          name = "edge";
+          id = n + 2 + numOfFogNodes;
+        })
+        (lib.range 1 (numOfFogNodes * numOfEdgeNodesPerFog));
+
+      # build the list of all nodes
+      vmData = [{
+        name = "cloud";
+        id = 2;
+      }] ++ genFogNodes ++ genEdgeNodes;
+
+      # fill leading zeros, used for MAC address generation
       fillLeadingZeros = s:
         let
           len = builtins.stringLength s;
@@ -64,6 +73,7 @@
         then "0${s}"
         else s;
 
+      # convert decimal to hex
       decToHex =
         with lib; let
           intToHex = [
@@ -98,165 +108,11 @@
         in
         fillLeadingZeros hexValue;
 
-      networkSetupScript = pkgs.writeShellScript "setup-networking.sh" ''
-          #!/usr/bin/env bash
-
-          set -e
-
-          log() {
-              echo "[$(date)] $1" | tee -a /var/log/setup-networking.log
-          }
-
-          PATH=$PATH:${lib.makeBinPath (with pkgs; [ iproute2 gawk ])}
-
-          MAC_ADDR=$(ip link show dev eth0 | grep ether | awk '{print $2}')
-          IFS=':' read -ra ADDR <<< "$MAC_ADDR"
-          NUM_OF_FOG_NODES=''${ADDR[2]}
-          NUM_OF_EDGE_NODES_PER_FOG=''${ADDR[3]}
-          NODE_ID=$((0x''${ADDR[4]}''${ADDR[5]}))
-          if [[ "$NODE_ID" -eq 2 ]]; then
-              ROLE="cloud"
-          elif [[ "$NODE_ID" -gt 2 && "$NODE_ID" -le $((2 + 0x$NUM_OF_FOG_NODES)) ]]; then
-              ROLE="fog"
-          else
-              ROLE="edge"
-          fi
-          HOSTNAME="''${ROLE}-''${NODE_ID}"
-          IPV4_ADDR="172.20.$((NODE_ID / 256)).$((NODE_ID % 256))"
-          DEFAULT_GATEWAY="172.20.0.1"
-
-          log "MAC_ADDR: $MAC_ADDR"
-          log "NUM_OF_FOG_NODES: $NUM_OF_FOG_NODES"
-          log "NUM_OF_EDGE_NODES_PER_FOG: $NUM_OF_EDGE_NODES_PER_FOG"
-          log "NODE_ID: $NODE_ID"
-          log "ROLE: $ROLE"
-          log "HOSTNAME: $HOSTNAME"
-          log "IPV4_ADDR: $IPV4_ADDR"
-
-          ip addr flush dev eth0
-          ip addr add $IPV4_ADDR/24 dev eth0
-          ip link set eth0 up
-
-          ip route add default via $DEFAULT_GATEWAY
-
-          mkdir -p /var/lib/mistify
-
-          cat > /var/lib/mistify/config.toml <<EOF
-        ConfigPort = 8080
-        RProxyConfigPort = 8081
-        RProxyListenAddress = "0.0.0.0"
-        RProxyBin = "rproxy"
-
-        COAPPort = 5683
-        HTTPPort = 80
-        GRPCPort = 9000
-
-        Backend = "docker"
-        ID = "$HOSTNAME"
-
-        Mode = "$ROLE"
-
-        RegistryPort = 8082
-        Host = "$IPV4_ADDR"
-        EOF
-        
-          if [[ "$ROLE" == "fog" ]]; then
-              echo "ParentAddress = \"172.20.0.2:8082\"" >> /var/lib/mistify/config.toml
-          elif [[ "$ROLE" == "edge" ]]; then
-              PARENT_ID=$(( (NODE_ID - 2 - 1) / NUM_OF_EDGE_NODES_PER_FOG + 2 ))
-              PARENT_FOG_NODE_IP="172.20.$((PARENT_ID / 256)).$((PARENT_ID % 256))"
-              echo "ParentAddress = \"$PARENT_FOG_NODE_IP:8082\"" >> /var/lib/mistify/config.toml
-          fi
-      '';
-
-      mistifyStartScript = pkgs.writeShellScript "start-mistify.sh" ''
-        #!/usr/bin/env bash
-        PATH=$PATH:${lib.makeBinPath [tinyFaaS]}
-        mistify config.toml
-      '';
-
-      tinyFaaSStartScript = pkgs.writeShellScript "start-tinyFaaS.sh" ''
-        #!/usr/bin/env bash
-        PATH=$PATH:${lib.makeBinPath [tinyFaaS]}
-        ln -s ${tinyFaaS}/share/tinyFaaS/runtimes ./runtimes
-        export DOCKER_API_VERSION=1.41
-        manager config.toml
-      '';
-
+      # this is the VM generation function, it generates the NixOS configuration for a VM
       generateVM = { name, id }: {
-        users.users.root.password = "";
-        environment.systemPackages = with pkgs; [
-          iperf
-          iproute2
-          nmap
-          tinyFaaS
+        imports = [
+          ./microvm.nix
         ];
-
-        services.iperf3 = {
-          enable = true;
-          openFirewall = true;
-        };
-
-        services.openssh = {
-          enable = true;
-          openFirewall = true;
-          settings = {
-            PermitRootLogin = "yes";
-            PasswordAuthentication = true;
-          };
-        };
-
-        networking = {
-          hostName = "vm";
-          useDHCP = false;
-          interfaces."eth0".ipv4.addresses = [{
-            address = "172.21.0.1";
-            prefixLength = 16;
-          }];
-          defaultGateway = "172.20.0.1";
-          nameservers = [ "1.1.1.1" ];
-          firewall.allowedTCPPorts = [ 80 8080 8081 8082 9000 ];
-          firewall.allowedUDPPorts = [ 5683 ];
-        };
-
-        systemd.services.setup-network = {
-          description = "Setup networking based on MAC address";
-          after = [ "network-pre.target" ];
-          before = [ "sshd.service" ];
-          wantedBy = [ "multi-user.target" ];
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = "yes";
-            ExecStart = "${networkSetupScript}";
-          };
-        };
-
-        virtualisation.docker.enable = true;
-
-        systemd.services.mistify = {
-          description = "Mistify";
-          after = [ "network-pre.target" "setup-network.service" ];
-          wantedBy = [ "multi-user.target" ];
-          serviceConfig = {
-            Type = "simple";
-            ExecStart = "${mistifyStartScript}";
-            WorkingDirectory = "/var/lib/mistify";
-          };
-        };
-
-        systemd.services.tinyFaaS =
-          {
-            description = "TinyFaaS";
-            after = [ "network-pre.target" "docker.service" "mistify.service" ];
-            wantedBy = [ "multi-user.target" ];
-            serviceConfig = {
-              Type = "simple";
-              ExecStart = "${tinyFaaSStartScript}";
-              WorkingDirectory = "/var/lib/mistify";
-            };
-          };
-
-        system.stateVersion = "23.11";
 
         microvm = {
           interfaces = [{
@@ -276,12 +132,23 @@
         };
       };
 
+      # generate the NixOS configurations for all VMs
       generateVMs = vmData: builtins.listToAttrs (map
         (vm: {
           name = "${vm.name}-${builtins.toString vm.id}";
           value = nixpkgs.lib.nixosSystem {
             inherit system;
             modules = [
+              (
+                { pkgs, ... }:
+                {
+                  nixpkgs.overlays = [
+                    (self: super: {
+                      tinyFaaS = tinyFaaS;
+                    })
+                  ];
+                }
+              )
               microvm.nixosModules.microvm
               (generateVM vm)
             ];
@@ -290,6 +157,7 @@
         vmData
       );
 
+      # generate the packages for all VMs
       generatePackages = vmData: builtins.listToAttrs (map
         (vm: {
           name = "${vm.name}-${builtins.toString vm.id}";
@@ -302,8 +170,10 @@
         vmData
       );
 
+      # helper function to generate a shell script
       mkScript = content: pkgs.writeShellScriptBin "script" content;
 
+      # script for creating the TAP interfaces on the host
       createTapCmds = builtins.concatStringsSep "\n" (builtins.map
         (vm:
           ''
@@ -315,6 +185,7 @@
         )
         vmData);
 
+      # script for deleting the TAP interfaces on the host
       removeTapCmds = builtins.concatStringsSep "\n" (builtins.map
         (vm:
           ''
@@ -324,6 +195,7 @@
         )
         vmData);
 
+      # script for applying network shaping on the host
       createTcCmds = builtins.concatStringsSep "\n" (builtins.map
         (vm:
           let
@@ -337,6 +209,7 @@
         )
         vmData);
 
+      # script for removing network shaping on the host
       removeTcCmds = builtins.concatStringsSep "\n" (builtins.map
         (vm:
           ''
@@ -345,6 +218,7 @@
         )
         vmData);
 
+      # script for setting up the network on the host
       setupScript = mkScript ''
         #!/usr/bin/env bash
         set -e
@@ -373,6 +247,7 @@
         setup_networking
       '';
 
+      # script for tearing down the network on the host
       teardownScript = mkScript ''
         #!/usr/bin/env bash
 
@@ -394,6 +269,7 @@
         teardown_networking
       '';
 
+      # script for starting the VMs
       startVMsScript =
         let
           nixCmd = "nix --extra-experimental-features nix-command --extra-experimental-features flakes";
@@ -414,21 +290,14 @@
           done
         '';
 
-      mapVMData = builtins.map
-        (vm: {
-          inherit vm;
-          divResult = toString (builtins.div vm.id 256);
-          modResult = toString (lib.mod vm.id 256);
-        })
-        vmData;
-
-
+      # script for stopping the VMs
       stopVMsScript = mkScript ''
         #!/usr/bin/env bash
 
         pkill firecracker
       '';
 
+      # script for logging into a VM
       loginScript = mkScript ''
         #!/usr/bin/env bash
 
@@ -439,7 +308,6 @@
 
         HOST="$1"
 
-        PASSWORD=""
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@$HOST"
       '';
 
