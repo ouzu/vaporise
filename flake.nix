@@ -311,6 +311,13 @@
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@$HOST"
       '';
 
+      # script for capturing traffic using tcpdump
+      captureScript = mkScript ''
+        #!/usr/bin/env bash
+
+        ${pkgs.tcpdump}/bin/tcpdump -w ./capture.pcap -i br0 "(src net 172.20.0.0/24) and (dst net 172.20.0.0/24)"
+      '';
+
     in
     {
       nixosConfigurations = generateVMs vmData;
@@ -336,6 +343,10 @@
         login = {
           type = "app";
           program = "${loginScript}/bin/script";
+        };
+        capture = {
+          type = "app";
+          program = "${captureScript}/bin/script";
         };
       };
     };
