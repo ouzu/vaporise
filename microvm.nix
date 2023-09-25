@@ -99,7 +99,20 @@ let
   '';
 in
 {
-  users.users.root.password = "";
+  users.users.root = {
+    password = "";
+    shell = pkgs.zsh;
+  };
+
+  programs.zsh.enable = true;
+
+  programs.starship = {
+    enable = true;
+    settings = {
+      format = "$localip$directory$character";
+    };
+  };
+
   environment.systemPackages = with pkgs; [
     iperf
     iproute2

@@ -39,7 +39,16 @@
       tinyFaaS = mistify.packages.${system}.tinyFaaS;
       tfcli = tinyFaaS-cli.packages.${system}.tinyFaaS-cli;
 
-      pkgs = import nixpkgs { inherit system; };
+      pkgs = import nixpkgs {
+        inherit system;
+        config.permittedInsecurePackages = [
+          # currently needed for nixops
+          "python3.10-requests-2.29.0"
+          # who doesn't love using insecure cryptography libraries?
+          "python3.10-cryptography-40.0.2"
+          "python3.10-cryptography-40.0.1"
+        ];
+      };
 
       lib = pkgs.lib;
       mod = lib.mod;
@@ -131,7 +140,12 @@
               in
               "02:00:${nFog}:${nEdge}:${id1}:${id2}";
           }];
-          socket = "/tmp/${builtins.toString id}-${name}.socket";
+          volumes = [{
+            image = "/tmp/vaporise/${builtins.toString id}-${name}-var-lib.img";
+            mountPoint = "/var/lib";
+            size = 2048;
+          }];
+          socket = "/tmp/vaporise/${builtins.toString id}-${name}.socket";
           hypervisor = "firecracker";
         };
       };
@@ -284,6 +298,8 @@
           #!/usr/bin/env bash
           set -e
 
+          mkdir -p /tmp/vaporise
+
           echo "Building first VM..."
           ${nixCmd} build .#cloud-2
           
@@ -299,6 +315,8 @@
         #!/usr/bin/env bash
 
         pkill firecracker
+
+        rm -rf /tmp/vaporise
       '';
 
       # script for logging into a VM
@@ -323,16 +341,50 @@
       '';
 
       # script for deploying functions
-      deployScript = mkScript ''
-        #!/usr/bin/env  bash
+      deployScript =
+        let
+          fns = [
+            "dd"
+            "matmul"
+            "iperf"
+          ];
 
-        ${tfcli}/bin/tinyFaaS-cli --config cloud.toml upload ${tinyFaaS}/share/tinyFaaS/fns/sieve-of-eratosthenes "sieve" "nodejs" 1
-      '';
+          deployCommand = (fn:
+            ''${tfcli}/bin/tinyFaaS-cli --config cloud.toml upload ${tinyFaaS}/share/tinyFaaS/fns/${fn} "${fn}" "python" 1''
+          );
+        in
+        mkScript ''
+          #!/usr/bin/env bash
+
+          ${builtins.concatStringsSep "\n" (map deployCommand fns)}
+        '';
 
     in
     {
-      nixosConfigurations = generateVMs vmData;
+      nixosConfigurations = generateVMs vmData // {
+        default = nixpkgs.lib.nixosSystem {
+          inherit system;
+          modules = [
+            <nixpkgs/nixos/modules/virtualisation/google-compute-image.nix>
+            {
+              imports = [
+                ./host.nix
+              ];
+            }
+          ];
+        };
+      };
       packages.${system} = generatePackages vmData;
+
+      devShell.${system} = with pkgs; mkShell {
+        name = "vaporise-shell";
+        buildInputs = [
+          tfcli
+          tcpdump
+          nixopsUnstable
+          google-cloud-sdk
+        ];
+      };
 
       apps.${system} = {
         setup = {
