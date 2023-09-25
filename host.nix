@@ -6,7 +6,18 @@
     home = "/home/user";
     group = "users";
     extraGroups = [ "wheel" ];
-    useDefaultShell = true;
+    shell = pkgs.zsh;
     openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMO2GDOWjN3sWSCS6gN+e8gT4IiALNxCBvC8dZTzjTbq" ];
   };
+
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
+  programs.zsh.enable = true;
+  programs.starship.enable = true;
+  programs.mosh.enable = true;
+
+  environment.systemPackages = with pkgs; [
+    git
+    helix
+  ];
 }

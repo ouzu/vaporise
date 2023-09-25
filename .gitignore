@@ -2,3 +2,4 @@
 /tfcli
 /*.pcap
 /.direnv
+/create_instance.sh
