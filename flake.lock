@@ -36,6 +36,42 @@
         "type": "github"
       }
     },
+    "flake-utils_3": {
+      "inputs": {
+        "systems": "systems_3"
+      },
+      "locked": {
+        "lastModified": 1694529238,
+        "narHash": "sha256-zsNZZGTGnMOf9YpHKJqMSsa0dXbfmxeoJ7xHlrt+xmY=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "ff7b65b44d01cf9ba6a71320833626af21126384",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "flake-utils_4": {
+      "inputs": {
+        "systems": "systems_4"
+      },
+      "locked": {
+        "lastModified": 1694529238,
+        "narHash": "sha256-zsNZZGTGnMOf9YpHKJqMSsa0dXbfmxeoJ7xHlrt+xmY=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "ff7b65b44d01cf9ba6a71320833626af21126384",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
     "microvm": {
       "inputs": {
         "flake-utils": "flake-utils",
@@ -44,11 +80,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1694526290,
-        "narHash": "sha256-HiWr+tfJE/hcn8atRC0S5KweSUknQLEduPLTEiSr5J8=",
+        "lastModified": 1695397534,
+        "narHash": "sha256-I6mbt3pV3LjMwlBdYRSrEK8qtXX/keYLXMRu1D3r2YY=",
         "owner": "astro",
         "repo": "microvm.nix",
-        "rev": "03e7f11cf915a911277c2cdea5d7da9717597aa2",
+        "rev": "8b1fda371d21f92609e8bb0d418bd6b1da84c155",
         "type": "github"
       },
       "original": {
@@ -62,14 +98,15 @@
         "flake-utils": "flake-utils_2",
         "nixpkgs": [
           "nixpkgs"
-        ]
+        ],
+        "tinyFaaS-cli": "tinyFaaS-cli"
       },
       "locked": {
-        "lastModified": 1694958611,
-        "narHash": "sha256-wUbRaRWLj4mTOqryS/WLl9YBFxzUjzYpLaEX/RihhH8=",
+        "lastModified": 1695643842,
+        "narHash": "sha256-KSDcYqWTtb0cT/biz2MgsgckRPKuRPrkSc2Rtz09y2M=",
         "owner": "ouzu",
         "repo": "tinyFaaS",
-        "rev": "5516349e1fc67a2f708b314a2184d12d2ad18716",
+        "rev": "3a96985881dd625efa598f1e330a9bd7915db9e7",
         "type": "github"
       },
       "original": {
@@ -80,11 +117,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1694887919,
-        "narHash": "sha256-VSBAjjQGLKYG/8dpC/9V7/dLlimkUzdYcibDKjwnzDE=",
+        "lastModified": 1695318763,
+        "narHash": "sha256-FHVPDRP2AfvsxAdc+AsgFJevMz5VBmnZglFUMlxBkcY=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "b2e813ada825ef491546ea81f42ef2d37ce71bf6",
+        "rev": "e12483116b3b51a185a33a272bf351e357ba9a99",
         "type": "github"
       },
       "original": {
@@ -96,7 +133,8 @@
       "inputs": {
         "microvm": "microvm",
         "mistify": "mistify",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "tinyFaaS-cli": "tinyFaaS-cli_2"
       }
     },
     "systems": {
@@ -126,6 +164,79 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "systems_3": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "systems_4": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "tinyFaaS-cli": {
+      "inputs": {
+        "flake-utils": "flake-utils_3",
+        "nixpkgs": [
+          "mistify",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1695643598,
+        "narHash": "sha256-MTLzbxkgpRAbSES2nvC0GlkMqH3OnUlXHni7+ZSPwLs=",
+        "owner": "ouzu",
+        "repo": "tinyFaaS-cli",
+        "rev": "f217cf922701d82f5646c22dd38e2e53c76f2233",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ouzu",
+        "repo": "tinyFaaS-cli",
+        "type": "github"
+      }
+    },
+    "tinyFaaS-cli_2": {
+      "inputs": {
+        "flake-utils": "flake-utils_4",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1695643598,
+        "narHash": "sha256-MTLzbxkgpRAbSES2nvC0GlkMqH3OnUlXHni7+ZSPwLs=",
+        "owner": "ouzu",
+        "repo": "tinyFaaS-cli",
+        "rev": "f217cf922701d82f5646c22dd38e2e53c76f2233",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ouzu",
+        "repo": "tinyFaaS-cli",
         "type": "github"
       }
     }

@@ -7,10 +7,13 @@
   inputs.mistify.url = "github:ouzu/tinyFaaS";
   inputs.mistify.inputs.nixpkgs.follows = "nixpkgs";
 
-  outputs = { self, nixpkgs, microvm, mistify, ... } @ allAttrs:
+  inputs.tinyFaaS-cli.url = "github:ouzu/tinyFaaS-cli";
+  inputs.tinyFaaS-cli.inputs.nixpkgs.follows = "nixpkgs";
+
+  outputs = { self, nixpkgs, microvm, mistify, tinyFaaS-cli, ... } @ allAttrs:
     let
       # how many fog nodes to create
-      numOfFogNodes = 10;
+      numOfFogNodes = 3;
 
       # how many edge nodes to create per fog node
       numOfEdgeNodesPerFog = 4;
@@ -34,6 +37,7 @@
       system = "x86_64-linux";
 
       tinyFaaS = mistify.packages.${system}.tinyFaaS;
+      tfcli = tinyFaaS-cli.packages.${system}.tinyFaaS-cli;
 
       pkgs = import nixpkgs { inherit system; };
 
@@ -318,6 +322,13 @@
         ${pkgs.tcpdump}/bin/tcpdump -w ./capture.pcap -i br0 "(src net 172.20.0.0/24) and (dst net 172.20.0.0/24)"
       '';
 
+      # script for deploying functions
+      deployScript = mkScript ''
+        #!/usr/bin/env  bash
+
+        ${tfcli}/bin/tinyFaaS-cli --config cloud.toml upload ${tinyFaaS}/share/tinyFaaS/fns/sieve-of-eratosthenes "sieve" "nodejs" 1
+      '';
+
     in
     {
       nixosConfigurations = generateVMs vmData;
@@ -347,6 +358,10 @@
         capture = {
           type = "app";
           program = "${captureScript}/bin/script";
+        };
+        deploy = {
+          type = "app";
+          program = "${deployScript}/bin/script";
         };
       };
     };
