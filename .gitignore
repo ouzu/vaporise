@@ -3,3 +3,6 @@
 /*.pcap
 /.direnv
 /create_instance.sh
+/analysis
+!/analysis/*.nix
+!/analysis/flake.lock

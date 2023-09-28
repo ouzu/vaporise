@@ -14,10 +14,14 @@
 
   programs.zsh.enable = true;
   programs.starship.enable = true;
+  programs.fzf.keybindings = true;
   programs.mosh.enable = true;
 
   environment.systemPackages = with pkgs; [
     git
     helix
+    xh
+    btop
+    tmux
   ];
 }

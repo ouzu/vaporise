@@ -1,5 +1,7 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib, mistifyStrategy, ... }:
 let
+  mistifyStrategy = "random";
+
   # this is the node setup script, it initializes the microvm
   networkSetupScript = with pkgs; writeShellScript "setup-networking.sh" ''
       #!/usr/bin/env bash
@@ -68,6 +70,8 @@ let
 
     Mode = "$ROLE"
 
+    MistifyStrategy = "${mistifyStrategy}"
+
     RegistryPort = 8082
     Host = "$IPV4_ADDR"
     EOF
@@ -86,6 +90,7 @@ let
   mistifyStartScript = with pkgs; writeShellScript "start-mistify.sh" ''
     #!/usr/bin/env bash
     PATH=$PATH:${lib.makeBinPath [tinyFaaS]}
+    #export LOG_LEVEL=debug
     mistify config.toml
   '';
 

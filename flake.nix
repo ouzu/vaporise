@@ -16,7 +16,7 @@
       numOfFogNodes = 3;
 
       # how many edge nodes to create per fog node
-      numOfEdgeNodesPerFog = 4;
+      numOfEdgeNodesPerFog = 3;
 
       # network properties for each node type
       networkProperties = {
@@ -29,7 +29,7 @@
           rate = "500mbit";
         };
         edge = {
-          delay = "10ms";
+          delay = "1ms";
           rate = "100mbit";
         };
       };
@@ -383,6 +383,7 @@
           tcpdump
           nixopsUnstable
           google-cloud-sdk
+          k6
         ];
       };
 

@@ -80,11 +80,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1695397534,
-        "narHash": "sha256-I6mbt3pV3LjMwlBdYRSrEK8qtXX/keYLXMRu1D3r2YY=",
+        "lastModified": 1695719191,
+        "narHash": "sha256-/WtvNBHXLHwq7mfmVIFKdaXq0Tf0K0f6cFJ7Dqh3DMA=",
         "owner": "astro",
         "repo": "microvm.nix",
-        "rev": "8b1fda371d21f92609e8bb0d418bd6b1da84c155",
+        "rev": "09ed8c52817afb0acb6badc3905e3a121e80fe06",
         "type": "github"
       },
       "original": {
@@ -102,11 +102,11 @@
         "tinyFaaS-cli": "tinyFaaS-cli"
       },
       "locked": {
-        "lastModified": 1695648411,
-        "narHash": "sha256-LjU++tgLw4M3gsifUV458I8v+4T+G2shX0oKcs5W/dc=",
+        "lastModified": 1695822883,
+        "narHash": "sha256-eOsFq3FfDvCKdM6UoeBRBbEN1bT26EbqxHjuGJeRzeo=",
         "owner": "ouzu",
         "repo": "tinyFaaS",
-        "rev": "050efab7902fa1cb2ace591e4d215e462406895d",
+        "rev": "19ef6b664459bda798e96654913b13c8055a28d3",
         "type": "github"
       },
       "original": {
@@ -117,11 +117,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1695318763,
-        "narHash": "sha256-FHVPDRP2AfvsxAdc+AsgFJevMz5VBmnZglFUMlxBkcY=",
+        "lastModified": 1695609632,
+        "narHash": "sha256-+RWYu7xDgYI7KhzKv2Cdqb0mkPFsEr0FcV5mrUAu0SI=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "e12483116b3b51a185a33a272bf351e357ba9a99",
+        "rev": "0a017f947fc9a060bfdd79a8e885f1d54fd8a592",
         "type": "github"
       },
       "original": {
