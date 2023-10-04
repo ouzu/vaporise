@@ -23,5 +23,6 @@
     xh
     btop
     tmux
+    iptables
   ];
 }
