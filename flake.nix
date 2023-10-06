@@ -1,6 +1,8 @@
 {
   description = "NixOS in MicroVMs";
 
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/release-23.05";
+  
   inputs.microvm.url = "github:astro/microvm.nix";
   inputs.microvm.inputs.nixpkgs.follows = "nixpkgs";
 
@@ -13,10 +15,10 @@
   outputs = { self, nixpkgs, microvm, mistify, tinyFaaS-cli, ... } @ allAttrs:
     let
       # how many fog nodes to create
-      numOfFogNodes = 3;
+      numOfFogNodes = 16;
 
       # how many edge nodes to create per fog node
-      numOfEdgeNodesPerFog = 3;
+      numOfEdgeNodesPerFog = 6;
 
       # network properties for each node type
       networkProperties = {
