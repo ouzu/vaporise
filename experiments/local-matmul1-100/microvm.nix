@@ -90,7 +90,7 @@ let
   mistifyStartScript = with pkgs; writeShellScript "start-mistify.sh" ''
     #!/usr/bin/env bash
     PATH=$PATH:${lib.makeBinPath [tinyFaaS]}
-    #export LOG_LEVEL=debug
+    export LOG_LEVEL=debug
     mistify config.toml
   '';
 
