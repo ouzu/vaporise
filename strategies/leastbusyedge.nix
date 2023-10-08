@@ -1,6 +1,6 @@
 { pkgs, lib, mistifyStrategy, ... }:
 let
-  mistifyStrategy = "leastbusy";
+  mistifyStrategy = "leastbusyedge";
 
   # this is the node setup script, it initializes the microvm
   networkSetupScript = with pkgs; writeShellScript "setup-networking.sh" ''
