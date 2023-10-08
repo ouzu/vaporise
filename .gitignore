@@ -6,3 +6,4 @@
 /analysis
 !/analysis/*.nix
 !/analysis/flake.lock
+*.tar.zst

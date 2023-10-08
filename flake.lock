@@ -102,11 +102,11 @@
         "tinyFaaS-cli": "tinyFaaS-cli"
       },
       "locked": {
-        "lastModified": 1696596385,
-        "narHash": "sha256-CPdKXAJEhrmJ0hbWWS+jSLLPqz+UujV87o/7qRxnH2M=",
+        "lastModified": 1696669895,
+        "narHash": "sha256-V/PG4c9Up5CreDdFBkO+SouYEIXkOjYDCgGZEXyLXgI=",
         "owner": "ouzu",
         "repo": "tinyFaaS",
-        "rev": "4654a5039b8f5c02fb2b022835f474ae3b768ba3",
+        "rev": "d5f38e9f65c5cae383234b98556215fb73303c89",
         "type": "github"
       },
       "original": {

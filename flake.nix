@@ -44,8 +44,7 @@
       pkgs = import nixpkgs {
         inherit system;
         config.permittedInsecurePackages = [
-          # currently needed for nixops
-          "python3.10-requests-2.29.0"
+          "python3.10-requests-2.28.2"
           # who doesn't love using insecure cryptography libraries?
           "python3.10-cryptography-40.0.2"
           "python3.10-cryptography-40.0.1"
