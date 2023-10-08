@@ -2,7 +2,7 @@
   description = "NixOS in MicroVMs";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/release-23.05";
-  
+
   inputs.microvm.url = "github:astro/microvm.nix";
   inputs.microvm.inputs.nixpkgs.follows = "nixpkgs";
 
@@ -307,7 +307,6 @@
           for vm in ${builtins.concatStringsSep " " names}; do
             echo "Starting $vm..."
             ${nixCmd} run .#$vm > /var/log/$vm.log 2>&1 &
-            sleep 1
           done
         '';
 
