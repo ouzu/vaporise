@@ -38,7 +38,7 @@ export default function () {
     headers: {
       "Content-Type": "application/json",
     },
-    timeout: 60000,  
+    timeout: 60000,
   };
 
   let payload = JSON.stringify({

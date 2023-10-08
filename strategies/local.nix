@@ -1,6 +1,6 @@
 { pkgs, lib, mistifyStrategy, ... }:
 let
-  mistifyStrategy = "roundrobin";
+  mistifyStrategy = "local";
 
   # this is the node setup script, it initializes the microvm
   networkSetupScript = with pkgs; writeShellScript "setup-networking.sh" ''
@@ -90,7 +90,7 @@ let
   mistifyStartScript = with pkgs; writeShellScript "start-mistify.sh" ''
     #!/usr/bin/env bash
     PATH=$PATH:${lib.makeBinPath [tinyFaaS]}
-    export LOG_LEVEL=debug
+    #export LOG_LEVEL=debug
     mistify config.toml
   '';
 

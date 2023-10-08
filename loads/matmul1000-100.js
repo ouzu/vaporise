@@ -42,7 +42,7 @@ export default function () {
   };
 
   let payload = JSON.stringify({
-    n: 1,
+    n: 1000,
     metadata: "",
   });
 

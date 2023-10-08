@@ -11,7 +11,7 @@ run_experiment() {
     nix run .#setup && nix run .#start && nix run .#deploy
 
     if [[ $? -eq 0 ]]; then
-        k6 run --out csv=test_results.csv load/load.js
+        k6 run --out csv=results.csv load.js
     else
         echo "Error during setup/start/deploy phase."
     fi
