@@ -1,4 +1,1 @@
-ConfigPort = 8080
-COAPPort = 5683
-HTTPPort = 80
-Host = "172.20.0.2"
+../../cloud.toml
