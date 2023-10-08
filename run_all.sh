@@ -8,7 +8,18 @@ fi
 parent_directory="$1"
 
 run_experiment() {
-    nix run .#setup && nix run .#start && nix run .#deploy
+    nix run .#setup
+    nix run .#start && echo "waiting for node" && until ping -c1 172.20.0.2 >/dev/null 2>&1; do sleep 0.1; done
+
+    echo "node is pingable"
+
+    until XH_HTTPIE_COMPAT_MODE=true xh 172.20.0.2 >/dev/null 2>&1; do sleep 0.1; done
+
+    echo "http is up"
+
+    sleep 10
+
+    nix run .#deploy
 
     if [[ $? -eq 0 ]]; then
         k6 run --out csv=results.csv load.js
@@ -16,7 +27,8 @@ run_experiment() {
         echo "Error during setup/start/deploy phase."
     fi
 
-    nix run .#stop && nix run .#teardown || echo "Error during stop/teardown phase."
+    nix run .#stop
+    nix run .#teardown
 }
 
 for dir in "$parent_directory"/*; do

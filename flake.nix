@@ -2,7 +2,7 @@
   description = "NixOS in MicroVMs";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/release-23.05";
-
+  
   inputs.microvm.url = "github:astro/microvm.nix";
   inputs.microvm.inputs.nixpkgs.follows = "nixpkgs";
 
