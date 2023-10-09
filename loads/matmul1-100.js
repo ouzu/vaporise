@@ -19,7 +19,8 @@ const TOTAL_VUS = VUS_PER_EDGE_REGION * N_FOG;
 export let options = {
   stages: [
     { duration: "1m", target: TOTAL_VUS },
-    { duration: "2m", target: TOTAL_VUS },
+    { duration: "3m", target: TOTAL_VUS },
+    { duration: "1m", target: 0 },
   ],
 };
 
