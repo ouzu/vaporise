@@ -19,16 +19,15 @@ const TOTAL_VUS = VUS_PER_EDGE_REGION * N_FOG;
 export let options = {
   stages: [
     { duration: "1m", target: TOTAL_VUS },
-    { duration: "3m", target: TOTAL_VUS },
+    { duration: "10m", target: TOTAL_VUS },
     { duration: "1m", target: 0 },
   ],
 };
 
-
 function getIP(vu) {
   let totalIPs = Math.floor((END_NODE - START_NODE + 1) / IP_SKIP);
-  let nodeIndex = (vu-1) % totalIPs;
-  return `172.20.0.${START_NODE + (nodeIndex * IP_SKIP)}`;
+  let nodeIndex = (vu - 1) % totalIPs;
+  return `172.20.0.${START_NODE + nodeIndex * IP_SKIP}`;
 }
 
 export default function () {
@@ -57,5 +56,5 @@ export default function () {
     ErrorCount.add(1);
   }
 
-  sleep(1); 
+  sleep(1);
 }
