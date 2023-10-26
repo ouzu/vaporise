@@ -15,7 +15,7 @@
   outputs = { self, nixpkgs, microvm, mistify, tinyFaaS-cli, ... } @ allAttrs:
     let
       # how many fog nodes to create
-      numOfFogNodes = 16;
+      numOfFogNodes = 1;
 
       # how many edge nodes to create per fog node
       numOfEdgeNodesPerFog = 6;

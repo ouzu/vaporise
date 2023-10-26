@@ -1,27 +1,35 @@
 import http from "k6/http";
 import { sleep, check } from "k6";
 import { Counter } from "k6/metrics";
+import exec from 'k6/execution';
 
 let ErrorCount = new Counter("errors");
 
-const N_FOG = 16;
-const N_EDGE_PER_FOG = 6;
+const N_FOG = 3;
+const N_EDGE_PER_FOG = 3;
+
+const TOTAL_EDGE_NODES = N_FOG * N_EDGE_PER_FOG;
+
 let ALL_EDGE_NODES = false;
 let IP_SKIP = ALL_EDGE_NODES ? 1 : N_EDGE_PER_FOG;
 
 const START_NODE = 3 + N_FOG;
 const END_NODE = START_NODE + N_EDGE_PER_FOG * N_FOG - 1;
 
-const VUS_PER_EDGE_REGION = 100;
+const REQUESTS_PER_SECOND_PER_NODE = 1;
+const TOTAL_REQUESTS_PER_SECOND = REQUESTS_PER_SECOND_PER_NODE * TOTAL_EDGE_NODES;
 
-const TOTAL_VUS = VUS_PER_EDGE_REGION * N_FOG;
-
-export let options = {
-  stages: [
-    { duration: "1m", target: TOTAL_VUS },
-    { duration: "10m", target: TOTAL_VUS },
-    { duration: "1m", target: 0 },
-  ],
+export const options = {
+  discardResponseBodies: true,
+  scenarios: {
+    contacts: {
+      executor: 'constant-arrival-rate',
+      duration: '10m',
+      rate: N_EDGE_PER_FOG,
+      timeUnit: '1s',
+      preAllocatedVUs: N_EDGE_PER_FOG * 60,
+    },
+  }
 };
 
 function getIP(vu) {
@@ -31,7 +39,10 @@ function getIP(vu) {
 }
 
 export default function () {
-  let ip = getIP(__VU);
+  //let ip = getIP(exec.vu.iterationInScenario);
+
+  let ip = `172.20.0.${2 + N_FOG}`
+
   let url = `http://${ip}/matmul`;
 
   let params = {
